@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang=en>
+
+<head>
+    <meta charset="UTF-8">
+    <!-- Reference to jquery -->
+    <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- STYLES -->
+    <style>
+        /** Global reset */
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            position: relative;
+        }
+        
+        h1 {
+            text-align: center;
+        }
+        
+        canvas {
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            left: 0;
+        }
+        
+        canvas,
+        #message,
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+        }
+        
+        canvas,
+        #message {
+            border: 25px solid transparent;
+        }
+        
+        #message {
+            background: rgba(201, 201, 201, 0.2);
+            text-align: center;
+        }
+    </style>
+
+    <section id="message">
+        <h1>Sparkle</h1>
+        <blockquote>
+            It's not too often that we think about ourselves as a core part of this universe. Let's reflect upon who we are, what we contribute, &amp; where we're going.
+            <footer>-Michael A Wilson, <cite>City of Solace</cite></footer>
+        </blockquote>
+    </section>
+
+
+    <canvas id="canvas">
+
+        </canvas>
+    <!-- SCRIPTS -->
+    <script>
+        (function() {
+            /** 
+             * @class Sparkle 
+             * @description Object representation of a sparkle.
+             */
+            class Sparkle {
+                /** 
+                 * @constructor
+                 * @param {Number} radius The radius of the element
+                 * @param {Number} x The current x-position of the element
+                 * @param {Number} y The current y-position of the element
+                 * @param {Number} xV Velocity with respect to the x-axis
+                 * @param {Number} yV Velocity with respect to the y-axis
+                 * @param {String} color The color of this element
+                 * @param {Number} halfLife The half life of the element
+                 */
+                constructor(radius, x, y, xV, yV, color, halfLife) {
+                    this.radius = radius;
+                    this.xPos = x;
+                    this.yPos = y;
+                    this.xVel = xV;
+                    this.yVel = yV;
+                    this.color = color;
+                    this.halfLife = halfLife;
+                    this.originalHalfLife = halfLife;
+                }
+
+                ///////////////
+                /// GETTERS ///
+                ///////////////
+                get radius() {
+                    return this._radius;
+                }
+
+                get xPos() {
+                    return this._xPos;
+                }
+
+                get yPos() {
+                    return this._yPos;
+                }
+
+                get xVel() {
+                    return this._xVel;
+                }
+
+                get yVel() {
+                    return this._yVel;
+                }
+
+                get color() {
+                    return this._color;
+                }
+
+                get halfLife() {
+                    return this._halfLife;
+                }
+
+                get originalHalfLife() {
+                    return this._originalHalfLife;
+                }
+
+                ///////////////
+                /// SETTERS ///
+                ///////////////
+                /** @param {Number} newRadius */
+                set radius(newRadius) {
+                    this._radius = newRadius;
+                }
+
+                /** @param {Number} newX */
+                set xPos(newX) {
+                    this._xPos = newX;
+                }
+
+                /** @param {Number} newY */
+                set yPos(newY) {
+                    this._yPos = newY;
+                }
+
+                /** @param {Number} newXVel */
+                set xVel(newXVel) {
+                    this._xVel = newXVel;
+                }
+
+                /** @param {Number} newYVel */
+                set yVel(newYVel) {
+                    this._yVel = newYVel;
+                }
+
+                /** @param {String} newColor */
+                set color(newColor) {
+                    this._color = newColor;
+                }
+
+                /** @param {Number} newHalfLife */
+                set halfLife(newHalfLife) {
+                    this._halfLife = newHalfLife;
+                }
+
+                /** @param {Number} originalHalfLife, NEVER MODIFY */
+                set originalHalfLife(originalHalfLife) {
+                    this._originalHalfLife = originalHalfLife;
+                }
+
+            }
+
+            const SPARKLE_LIMIT = 10;
+            let startX, startY, canvas, ctx, sparkles = new Array(SPARKLE_LIMIT);
+            let deviceScale = window.devicePixelRatio;
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', lightItUp);
+            } else {
+                lightItUp();
+            }
+
+            function lightItUp() {
+                canvas = document.querySelector("#canvas");
+
+                ctx = canvas.getContext("2d");
+                ctx.scale(deviceScale, deviceScale);
+                setUpSparkles();
+                //$(document).mousemove(followMouse);
+                window.requestAnimationFrame(draw);
+            }
+
+            /** 
+             * @method followMouse
+             * @description Updates the locations of each sparkle to follow the mouse
+             * @param {MouseEvent} event
+             */
+            function followMouse(event) {
+                let [x, y] = scaleToCanvas(event);
+                console.log(`x:${x}, y:${y}`);
+                for (let sparkle of sparkles) {
+                    sparkle._xPos = x;
+                    sparkle._yPos = y;
+                    console.log(sparkle);
+                }
+            }
+
+            /** 
+             * @method scaleToCanvas 
+             * @description Scales the positioning of the mouse relative to the canvas 
+             * @param {MouseEvent} event 
+             * @return {Array<Number>};
+             */
+            function scaleToCanvas(event) {
+                var bound = canvas.getBoundingClientRect();
+                return [event.clientX - bound.left, event.clientY - bound.top];
+            }
+
+            /** 
+             * @method setUpSparkles
+             * @description Creates the default sparkles
+             */
+            function setUpSparkles() {
+                for (let i = 0; i < SPARKLE_LIMIT; i++) {
+                    let xVel = Math.random() * 0.5 - 0.25,
+                        yVel = Math.random() * 0.5 - 0.25,
+                        halfLife = Math.round(Math.random() * 10 + 500);
+
+                    let rgb = generateRandomColor();
+                    let sparkle = new Sparkle(5, canvas.width / 2, canvas.height / 2, xVel, yVel, rgb, halfLife);
+                    sparkles[i] = sparkle;
+                }
+            }
+
+            /** 
+             * @method generateRandomColor
+             * @description Generates a random valid color.
+             * @return {String} The rgb value. 
+             */
+            function generateRandomColor(alpha = 1) {
+                let red = Math.round(Math.random() * 255);
+                let green = Math.round(Math.random() * 255);
+                let blue = Math.round(Math.random() * 255);
+                return `rgb(${red},${green},${blue}, ${alpha})`;
+            }
+
+            function draw() {
+                // clear the canvas 
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // save the canvas state 
+                ctx.save();
+
+                // draw animated shapes
+                handleSparkles();
+
+                // restore the canvas state
+                ctx.restore();
+
+                window.requestAnimationFrame(draw);
+            }
+
+            /** 
+             * @method handleSparkles
+             * @description handles drawing/updating the sparkles on the page.
+             */
+            function handleSparkles() {
+                for (let sparkle of sparkles) {
+                    if (!sparkle.hasOwnProperty('destroyed')) {
+                        sparkle._xPos += sparkle._xVel;
+                        sparkle._yPos += sparkle._yVel;
+                        ctx.fillStyle = sparkle._color;
+                        ctx.beginPath();
+                        ctx.arc(sparkle._xPos, sparkle._yPos, sparkle._radius, 0, 2 * Math.PI);
+                        ctx.fill();
+                        sparkle._halfLife--;
+                        if (sparkle._halfLife <= 0 - sparkle._originalHalfLife) {
+                            sparkle.destroyed = true;
+                        } else if (sparkle._halfLife <= 0) {
+                            // fade the sparkle
+                            sparkle._color = generateRandomColor(1 - (sparkle._halfLife * -1) / 6000);
+                            console.log('fading')
+                        }
+                    }
+
+                };
+            }
+        })();
+    </script>
+</body>
+
+</html>
